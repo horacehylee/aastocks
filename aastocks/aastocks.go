@@ -6,15 +6,17 @@ import (
 
 // Quote of AAStocks data
 type Quote struct {
-	symbol  string
-	client  *http.Client
-	name    string
-	price   float64
-	yield   float64
-	peRatio float64
-	pbRatio float64
-	lots    int
-	eps     float64
+	Symbol  string
+	Name    string
+	Price   float64
+	Yield   float64
+	PeRatio float64
+	PbRatio float64
+	Lots    int
+	Eps     float64
+
+	client    *http.Client
+	dividends []*Dividend
 }
 
 // Get quote from AAStocks with symbol
@@ -24,7 +26,7 @@ func Get(symbol string, opts ...Option) (*Quote, error) {
 		return nil, err
 	}
 	q := &Quote{
-		symbol: symbol,
+		Symbol: symbol,
 		client: client,
 	}
 	for _, opt := range opts {
