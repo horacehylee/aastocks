@@ -2,6 +2,7 @@ package aastocks
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -65,6 +66,10 @@ func dividends(doc *goquery.Document) ([]*Dividend, error) {
 	if headers.Length() == 0 {
 		return nil, fmt.Errorf("Table headers cannot be found")
 	}
+	// No dividends
+	if headers.Length() == 1 && strings.TrimSpace(headers.Text()) == "No related information." {
+		return make([]*Dividend, 0), nil
+	}
 
 	mappings, err := getTableMappings(headers)
 	if err != nil {
@@ -95,11 +100,7 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		{
 			header: "Announce Date",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
-				t := s.Text()
-				if t == "-" {
-					return nil
-				}
-				date, err := time.Parse(dateLayout, t)
+				date, err := getTime(s, dateLayout)
 				if err != nil {
 					return err
 				}
@@ -110,11 +111,7 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		{
 			header: "Year Ended",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
-				t := s.Text()
-				if t == "-" {
-					return nil
-				}
-				date, err := time.Parse(monthLayout, t)
+				date, err := getTime(s, monthLayout)
 				if err != nil {
 					return err
 				}
@@ -146,11 +143,7 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		{
 			header: "Ex-Date",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
-				t := s.Text()
-				if t == "-" {
-					return nil
-				}
-				date, err := time.Parse(dateLayout, t)
+				date, err := getTime(s, dateLayout)
 				if err != nil {
 					return err
 				}
@@ -161,11 +154,7 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		{
 			header: "Payable Date",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
-				t := s.Text()
-				if t == "-" {
-					return nil
-				}
-				date, err := time.Parse(dateLayout, t)
+				date, err := getTime(s, dateLayout)
 				if err != nil {
 					return err
 				}
@@ -190,4 +179,12 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		}
 	}
 	return mappings, nil
+}
+
+func getTime(s *goquery.Selection, layout string) (time.Time, error) {
+	t := strings.TrimSpace(s.Text())
+	if t == "-" {
+		return time.Time{}, nil
+	}
+	return time.Parse(layout, t)
 }

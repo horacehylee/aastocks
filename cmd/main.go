@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/horacehylee/aastocks/aastocks"
 )
@@ -17,7 +19,16 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	logger.Printf("quote: %#v", quote)
-	logger.Printf("newest dividend: %#v", d[0])
-	logger.Printf("oldest dividend: %#v", d[len(d)-1])
+	logger.Printf("quote: %#v\n", quote)
+	logger.Printf("dividends: %#v\n", len(d))
+
+	priceChan, errChan := quote.Prices(context.Background(), 5*time.Second)
+	for {
+		select {
+		case p := <-priceChan:
+			logger.Printf("price: %v\n", p)
+		case err = <-errChan:
+			logger.Printf("error: %v\n", err)
+		}
+	}
 }

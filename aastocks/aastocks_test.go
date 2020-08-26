@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -38,6 +39,22 @@ func TestGetQuote(t *testing.T) {
 			},
 		},
 		{
+			symbol: "09923",
+			requests: map[string]http.HandlerFunc{
+				"GET-http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=09923": serveFile("testdata/detail_quote_new.html"),
+			},
+			quote: Quote{
+				Symbol:  "09923",
+				Name:    "YEAHKA",
+				Price:   59.6,
+				Yield:   0,
+				PeRatio: 0,
+				PbRatio: 0,
+				Eps:     0,
+				Lots:    400,
+			},
+		},
+		{
 			symbol: "151511",
 			requests: map[string]http.HandlerFunc{
 				"GET-http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=151511": serveFile("testdata/detail_quote_not_found.html"),
@@ -49,25 +66,102 @@ func TestGetQuote(t *testing.T) {
 		t.Run(tC.symbol, func(t *testing.T) {
 			mock.set(tC.requests)
 
-			quote, err := Get(tC.symbol, WithClient(mock.client))
-			if tC.err != nil {
-				if err == nil {
-					t.Fatalf("error is expected (%v), but got none", tC.err)
+			checkErrorFunc(t, tC.err, func() error {
+				quote, err := Get(tC.symbol, WithClient(mock.client))
+				if err != nil {
+					return err
 				}
-				diff := cmp.Diff(tC.err, err, equateErrorMessage)
+				diff := cmp.Diff(tC.quote, *quote, cmp.AllowUnexported(Quote{}), cmpopts.IgnoreTypes(&http.Client{}))
 				if diff != "" {
 					t.Fatalf(diff)
 				}
-				return
-			}
+				return nil
+			})
+		})
+	}
+}
 
-			if err != nil {
-				t.Fatalf("No error should be expected: %v", err)
-			}
-			diff := cmp.Diff(tC.quote, *quote, cmp.AllowUnexported(Quote{}), cmpopts.IgnoreTypes(&http.Client{}))
-			if diff != "" {
-				t.Fatalf(diff)
-			}
+func TestQuoteDividend(t *testing.T) {
+	mock := mockClient()
+	testCases := []struct {
+		symbol    string
+		requests  map[string]http.HandlerFunc
+		dividends []*Dividend
+		err       error
+	}{
+		{
+			symbol: "00006",
+			requests: map[string]http.HandlerFunc{
+				"GET-http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=00006": serveFile("testdata/detail_quote.html"),
+				"GET-http://www.aastocks.com/en/stocks/analysis/dividend.aspx?symbol=00006":  serveFile("testdata/dividend.html"),
+			},
+			dividends: []*Dividend{
+				{
+					AnnounceDate: time.Date(2020, time.August, 5, 0, 0, 0, 0, time.UTC),
+					YearEnded:    time.Date(2020, time.December, 1, 0, 0, 0, 0, time.UTC),
+					Event:        "Interim",
+					Particular:   "D:HKD 0.7700",
+					Type:         "Cash",
+					ExDate:       time.Date(2020, time.September, 3, 0, 0, 0, 0, time.UTC),
+					PayableDate:  time.Date(2020, time.September, 15, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					AnnounceDate: time.Date(2020, time.March, 18, 0, 0, 0, 0, time.UTC),
+					YearEnded:    time.Date(2019, time.December, 1, 0, 0, 0, 0, time.UTC),
+					Event:        "Final",
+					Particular:   "D:HKD 2.0300",
+					Type:         "Cash",
+					ExDate:       time.Date(2020, time.May, 18, 0, 0, 0, 0, time.UTC),
+					PayableDate:  time.Date(2020, time.May, 28, 0, 0, 0, 0, time.UTC),
+				},
+				{
+					AnnounceDate: time.Date(2013, time.September, 27, 0, 0, 0, 0, time.UTC),
+					YearEnded:    time.Time{},
+					Event:        "Special",
+					Particular:   "Preferential Offer: 1 HK Electric Investments and HK Electric Investments Limited Share Stapled unit offer price HKD 5.4500 for every 4 Shares held",
+					Type:         "-",
+					ExDate:       time.Date(2014, time.January, 8, 0, 0, 0, 0, time.UTC),
+					PayableDate:  time.Time{},
+				},
+				{
+					AnnounceDate: time.Date(2013, time.July, 24, 0, 0, 0, 0, time.UTC),
+					YearEnded:    time.Date(2013, time.December, 1, 0, 0, 0, 0, time.UTC),
+					Event:        "Interim",
+					Particular:   "D:HKD 0.6500",
+					Type:         "Cash",
+					ExDate:       time.Date(2013, time.August, 23, 0, 0, 0, 0, time.UTC),
+					PayableDate:  time.Date(2013, time.September, 4, 0, 0, 0, 0, time.UTC),
+				},
+			},
+		},
+		{
+			symbol: "09923",
+			requests: map[string]http.HandlerFunc{
+				"GET-http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=09923": serveFile("testdata/detail_quote_new.html"),
+				"GET-http://www.aastocks.com/en/stocks/analysis/dividend.aspx?symbol=09923":  serveFile("testdata/divdend_empty.html"),
+			},
+			dividends: []*Dividend{},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.symbol, func(t *testing.T) {
+			mock.set(tC.requests)
+
+			checkErrorFunc(t, tC.err, func() error {
+				quote, err := Get(tC.symbol, WithClient(mock.client))
+				if err != nil {
+					return err
+				}
+				dividends, err := quote.Dividends()
+				if err != nil {
+					return err
+				}
+				diff := cmp.Diff(tC.dividends, dividends)
+				if diff != "" {
+					t.Fatalf(diff)
+				}
+				return nil
+			})
 		})
 	}
 }
@@ -135,3 +229,24 @@ var equateErrorMessage = cmp.Comparer(func(x, y error) bool {
 	}
 	return x.Error() == y.Error()
 })
+
+type errorFunc func() error
+
+func checkErrorFunc(t *testing.T, expectedError error, f errorFunc) {
+	err := f()
+
+	if err != nil {
+		if expectedError != nil {
+			diff := cmp.Diff(expectedError, err, equateErrorMessage)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		} else {
+			t.Fatalf("No error should be expected: %v", err)
+		}
+	} else {
+		if expectedError != nil {
+			t.Fatalf("error is expected (%v), but got none", expectedError)
+		}
+	}
+}
