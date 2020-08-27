@@ -22,7 +22,7 @@ func main() {
 	logger.Printf("quote: %#v\n", quote)
 	logger.Printf("dividends: %#v\n", len(d))
 
-	priceChan, errChan := quote.Prices(context.Background(), 5*time.Second)
+	priceChan, errChan := quote.ServePrice(context.Background(), 5*time.Second)
 	for {
 		select {
 		case p := <-priceChan:

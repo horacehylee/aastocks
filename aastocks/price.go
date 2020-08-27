@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-// Prices continously fetching latest price from AAStocks
-// It will start goroutine to fetch prices
-func (q *Quote) Prices(ctx context.Context, delay time.Duration) (<-chan float64, <-chan error) {
+// ServePrice continously fetching latest price from AAStocks.
+// It will start goroutine to fetch real time prices
+func (q *Quote) ServePrice(ctx context.Context, delay time.Duration) (<-chan float64, <-chan error) {
 	prices := make(chan float64)
 	errors := make(chan error)
 
@@ -27,7 +27,7 @@ func (q *Quote) Prices(ctx context.Context, delay time.Duration) (<-chan float64
 			case priceChan <- qq.Price:
 				priceChan = nil
 			case <-timeout:
-				err = qq.getQuoteDetail()
+				err = qq.details()
 				if err != nil {
 					errChan = errors
 				} else {

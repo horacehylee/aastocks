@@ -39,7 +39,7 @@ func Get(symbol string, opts ...Option) (*Quote, error) {
 	for _, opt := range opts {
 		opt(q)
 	}
-	return q, q.getQuoteDetail()
+	return q, q.details()
 }
 
 func defaultClient() (*http.Client, error) {
