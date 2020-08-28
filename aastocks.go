@@ -30,13 +30,9 @@ func (q *Quote) clone() *Quote {
 
 // Get quote from AAStocks with symbol
 func Get(symbol string, opts ...Option) (*Quote, error) {
-	client, err := defaultClient()
-	if err != nil {
-		return nil, err
-	}
 	q := &Quote{
 		Symbol: symbol,
-		client: client,
+		client: defaultClient(),
 	}
 	for _, opt := range opts {
 		opt(q)
@@ -44,12 +40,11 @@ func Get(symbol string, opts ...Option) (*Quote, error) {
 	return q, q.details()
 }
 
-func defaultClient() (*http.Client, error) {
+func defaultClient() *http.Client {
 	t := &transport{r: http.DefaultTransport}
-	c := &http.Client{
+	return &http.Client{
 		Transport: t,
 	}
-	return c, nil
 }
 
 type transport struct {
