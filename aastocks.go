@@ -2,18 +2,20 @@ package aastocks
 
 import (
 	"net/http"
+	"time"
 )
 
 // Quote of AAStocks data
 type Quote struct {
-	Symbol  string
-	Name    string
-	Price   float64
-	Yield   float64
-	PeRatio float64
-	PbRatio float64
-	Lots    int
-	Eps     float64
+	Symbol     string
+	Name       string
+	Price      float64
+	Yield      float64
+	PeRatio    float64
+	PbRatio    float64
+	Lots       int
+	Eps        float64
+	UpdateTime time.Time
 
 	client    *http.Client
 	dividends []*Dividend

@@ -2,8 +2,10 @@ package aastocks
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -42,6 +44,7 @@ func (q *Quote) details() error {
 		pbRatio(q, doc),
 		eps(q, doc),
 		lots(q, doc),
+		updateTime(q, doc),
 	}
 	for _, op := range ops {
 		err = op()
@@ -188,6 +191,35 @@ func lots(q *Quote, doc *goquery.Document) func() error {
 			return fmt.Errorf("Lots failed to parse: %v", err)
 		}
 		q.Lots = int(l)
+		return nil
+	}
+}
+
+var serverDateRegex = regexp.MustCompile(`var ServerDate = new Date\(\'(.*)\'\)`)
+
+func updateTime(q *Quote, doc *goquery.Document) func() error {
+	const timeLayout = "2006-01-02T15:04:05"
+
+	return func() error {
+		filterServerDateScript := func(i int, s *goquery.Selection) bool {
+			return serverDateRegex.MatchString(s.Text())
+		}
+		t := doc.Find("script").FilterFunction(filterServerDateScript).Text()
+		if t == "" {
+			return fmt.Errorf("Server date cannot be found")
+		}
+		matches := serverDateRegex.FindStringSubmatch(t)
+		if len(matches) < 2 {
+			return fmt.Errorf("Server date cannot be recognized")
+		}
+
+		serverDate := strings.TrimSpace(matches[1])
+
+		tt, err := time.Parse(timeLayout, serverDate)
+		if err != nil {
+			return fmt.Errorf("Failed to parse server date: %v", err)
+		}
+		q.UpdateTime = tt
 		return nil
 	}
 }

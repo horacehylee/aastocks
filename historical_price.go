@@ -33,8 +33,8 @@ const (
 	Monthly PriceFrequency = 68
 )
 
-// HistoricalPrice of the quote from AAStocks
-func (q *Quote) HistoricalPrice(frequency PriceFrequency) ([]Price, error) {
+// HistoricalPrices of the quote from AAStocks
+func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]Price, error) {
 	url := fmt.Sprintf(`http://chartdata1.internet.aastocks.com/servlet/iDataServlet/getdaily?id=%s.HK&type=24&market=1&level=1&period=%v&encoding=utf8`, q.Symbol, frequency)
 	resp, err := q.client.Get(url)
 	if err != nil {
