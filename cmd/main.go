@@ -11,18 +11,24 @@ import (
 
 func main() {
 	logger := log.New(os.Stdout, "", log.Flags())
-	quote, err := aastocks.Get("09923")
+	quote, err := aastocks.Get("00006")
 	if err != nil {
 		logger.Fatal(err)
 	}
+
 	d, err := quote.Dividends()
 	if err != nil {
 		logger.Fatal(err)
 	}
-	logger.Printf("quote: %#v\n", quote)
 	logger.Printf("dividends: %#v\n", len(d))
 
-	priceChan, errChan := quote.ServePrice(context.Background(), 5*time.Second)
+	prices, err := quote.HistoricalPrices(aastocks.Weekly)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	logger.Printf("historical prices: %v\n", len(prices))
+
+	priceChan, errChan := quote.ServePrices(context.Background(), 5*time.Second)
 	for {
 		select {
 		case p := <-priceChan:
