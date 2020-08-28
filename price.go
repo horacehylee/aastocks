@@ -12,7 +12,7 @@ type PriceResult struct {
 	Time   time.Time
 }
 
-// ServePrices continously fetching latest price from AAStocks.
+// ServePrices continuously fetching latest price from AAStocks.
 // It will start goroutine to fetch real time prices.
 func (q *Quote) ServePrices(ctx context.Context, delay time.Duration) (<-chan PriceResult, <-chan error) {
 	prices := make(chan PriceResult)

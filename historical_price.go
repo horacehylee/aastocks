@@ -139,7 +139,6 @@ func parsePrice(s string) (Price, error) {
 	if err != nil {
 		return Price{}, fmt.Errorf("Failed to parse %v", "Close price")
 	}
-	idx++
 
 	return Price{
 		Time:  t,
