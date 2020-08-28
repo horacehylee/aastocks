@@ -2,6 +2,7 @@ package aastocks
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,6 +24,11 @@ func (q *Quote) details() error {
 	if err != nil {
 		return err
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Failed to fetch quote details")
+	}
+
 	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
@@ -49,7 +55,7 @@ func (q *Quote) details() error {
 	for _, op := range ops {
 		err = op()
 		if err != nil {
-			return err
+			return fmt.Errorf("Quote details cannot be parsed: %v", err)
 		}
 	}
 	return nil
@@ -70,7 +76,7 @@ func name(q *Quote, doc *goquery.Document) func() error {
 	return func() error {
 		name := strings.TrimSpace(doc.Find("#cp_ucStockBar_litInd_StockName").Text())
 		if name == "" {
-			return fmt.Errorf("name cannot be found")
+			return fmt.Errorf("Name cannot be found")
 		}
 		q.Name = name
 		return nil
@@ -81,11 +87,11 @@ func price(q *Quote, doc *goquery.Document) func() error {
 	return func() error {
 		price := strings.TrimSpace(doc.Find("#labelLast").Text())
 		if price == "" {
-			return fmt.Errorf("price cannot be found")
+			return fmt.Errorf("Price cannot be found")
 		}
 		p, err := strconv.ParseFloat(price, 64)
 		if err != nil {
-			return fmt.Errorf("price failed to parse: %v", err)
+			return fmt.Errorf("Price failed to be parsed: %v", err)
 		}
 		q.Price = p
 		return nil
@@ -107,7 +113,7 @@ func peRatio(q *Quote, doc *goquery.Document) func() error {
 		}
 		p, err := strconv.ParseFloat(strings.TrimSpace(s[0]), 64)
 		if err != nil {
-			return fmt.Errorf("PE ratio failed to parse: %v", err)
+			return fmt.Errorf("PE ratio failed to be parsed: %v", err)
 		}
 		q.PeRatio = p
 		return nil
@@ -129,7 +135,7 @@ func pbRatio(q *Quote, doc *goquery.Document) func() error {
 		}
 		p, err := strconv.ParseFloat(strings.TrimSpace(s[0]), 64)
 		if err != nil {
-			return fmt.Errorf("PB ratio failed to parse: %v", err)
+			return fmt.Errorf("PB ratio failed to be parsed: %v", err)
 		}
 		q.PbRatio = p
 		return nil
@@ -155,7 +161,7 @@ func yield(q *Quote, doc *goquery.Document) func() error {
 		}
 		y, err := strconv.ParseFloat(strings.TrimSpace(percent[0]), 64)
 		if err != nil {
-			return fmt.Errorf("Yield failed to parse: %v", err)
+			return fmt.Errorf("Yield failed to be parsed: %v", err)
 		}
 		q.Yield = y / float64(100)
 		return nil
@@ -173,7 +179,7 @@ func eps(q *Quote, doc *goquery.Document) func() error {
 		}
 		e, err := strconv.ParseFloat(strings.TrimSpace(eps), 64)
 		if err != nil {
-			return fmt.Errorf("EPS failed to parse: %v", err)
+			return fmt.Errorf("EPS failed to be parsed: %v", err)
 		}
 		q.Eps = e
 		return nil
@@ -188,7 +194,7 @@ func lots(q *Quote, doc *goquery.Document) func() error {
 		}
 		l, err := strconv.ParseInt(strings.TrimSpace(lots), 10, 32)
 		if err != nil {
-			return fmt.Errorf("Lots failed to parse: %v", err)
+			return fmt.Errorf("Lots failed to be parsed: %v", err)
 		}
 		q.Lots = int(l)
 		return nil
@@ -209,15 +215,11 @@ func updateTime(q *Quote, doc *goquery.Document) func() error {
 			return fmt.Errorf("Server date cannot be found")
 		}
 		matches := serverDateRegex.FindStringSubmatch(t)
-		if len(matches) < 2 {
-			return fmt.Errorf("Server date cannot be recognized")
-		}
-
 		serverDate := strings.TrimSpace(matches[1])
 
 		tt, err := time.Parse(timeLayout, serverDate)
 		if err != nil {
-			return fmt.Errorf("Failed to parse server date: %v", err)
+			return fmt.Errorf("Server date failed to be parsed: %v", err)
 		}
 		q.UpdateTime = tt
 		return nil

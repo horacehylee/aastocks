@@ -84,7 +84,7 @@ func (s *priceScanner) Scan() bool {
 	if !s.scanner.Scan() {
 		return false
 	}
-	p, err := parsePrice(s.scanner.Text())
+	p, err := s.parsePrice(s.scanner.Text())
 	if err != nil {
 		s.err = err
 		return false
@@ -101,70 +101,106 @@ func (s *priceScanner) Err() error {
 	return s.err
 }
 
-func parsePrice(s string) (Price, error) {
-	parts := strings.Split(s, ";")
+func (s *priceScanner) parsePrice(str string) (Price, error) {
+	parts := strings.Split(str, ";")
 	if len(parts) != 7 && len(parts) != 8 {
 		return Price{}, fmt.Errorf("Failed to parse price data")
 	}
 
-	t, err := getPriceTime(parts)
-	if err != nil {
-		return Price{}, err
+	type parseFunc func(parts []string, idx int) (func(p *Price), error)
+	parseFuncs := []struct {
+		name      string
+		parseFunc parseFunc
+	}{
+		{
+			name: "Time",
+			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+				var err error
+				t, err := s.priceTime(parts)
+				f := func(p *Price) {
+					p.Time = t
+				}
+				return f, err
+			},
+		},
+		{
+			name: "Open price",
+			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+				var err error
+				v, err := strconv.ParseFloat(parts[idx], 64)
+				f := func(p *Price) {
+					p.Open = v
+				}
+				return f, err
+			},
+		},
+		{
+			name: "High price",
+			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+				var err error
+				v, err := strconv.ParseFloat(parts[idx], 64)
+				f := func(p *Price) {
+					p.High = v
+				}
+				return f, err
+			},
+		},
+		{
+			name: "Low price",
+			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+				var err error
+				v, err := strconv.ParseFloat(parts[idx], 64)
+				f := func(p *Price) {
+					p.Low = v
+				}
+				return f, err
+			},
+		},
+		{
+			name: "Close price",
+			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+				var err error
+				v, err := strconv.ParseFloat(parts[idx], 64)
+				f := func(p *Price) {
+					p.Close = v
+				}
+				return f, err
+			},
+		},
 	}
 
-	idx := 1
+	startIdx := 0
 	if len(parts) == 8 {
-		idx = 2
+		startIdx = 1
 	}
 
-	open, err := strconv.ParseFloat(parts[idx], 64)
-	if err != nil {
-		return Price{}, fmt.Errorf("Failed to parse %v", "Open price")
+	p := Price{}
+	for i, f := range parseFuncs {
+		opt, err := f.parseFunc(parts, startIdx+i)
+		if err != nil {
+			return Price{}, fmt.Errorf("%s failed to be parsed: %v", f.name, err)
+		}
+		opt(&p)
 	}
-	idx++
-
-	high, err := strconv.ParseFloat(parts[idx], 64)
-	if err != nil {
-		return Price{}, fmt.Errorf("Failed to parse %v", "High price")
-	}
-	idx++
-
-	low, err := strconv.ParseFloat(parts[idx], 64)
-	if err != nil {
-		return Price{}, fmt.Errorf("Failed to parse %v", "Low price")
-	}
-	idx++
-
-	close, err := strconv.ParseFloat(parts[idx], 64)
-	if err != nil {
-		return Price{}, fmt.Errorf("Failed to parse %v", "Close price")
-	}
-
-	return Price{
-		Time:  t,
-		Open:  open,
-		High:  high,
-		Low:   low,
-		Close: close,
-	}, nil
+	return p, nil
 }
 
-func getPriceTime(parts []string) (time.Time, error) {
+func (s *priceScanner) priceTime(parts []string) (time.Time, error) {
 	if len(parts) == 8 {
 		pd, err := time.Parse(monthDayLayout, dropUnknownChars(parts[0]))
 		if err != nil {
-			return time.Time{}, fmt.Errorf("Failed to parse price date: %v", err)
+			return time.Time{}, err
 		}
 		ptt, err := time.Parse(timeLayout, dropUnknownChars(parts[1]))
 		if err != nil {
-			return time.Time{}, fmt.Errorf("Failed to parse price time: %v", err)
+			return time.Time{}, err
 		}
 		return time.Date(time.Now().Year(), pd.Month(), pd.Day(), ptt.Hour(), ptt.Minute(), ptt.Second(), ptt.Nanosecond(), time.UTC), nil
 	}
 
 	pt, err := time.Parse(monthDayYearLayout, dropUnknownChars(parts[0]))
 	if err != nil {
-		return time.Time{}, fmt.Errorf("Failed to parse price date: %v", err)
+		return time.Time{}, err
 	}
 	return pt, nil
 }

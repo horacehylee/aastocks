@@ -84,7 +84,7 @@ func dividends(doc *goquery.Document) ([]*Dividend, error) {
 			s := row.Eq(mapping.index)
 			err := mapping.mapFunc(d, s)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Dividend failed to be parsed for %s of %v row: %v", mapping.header, i, err)
 			}
 		}
 		result = append(result, d)
