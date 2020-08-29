@@ -45,6 +45,9 @@ func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]HistoricalPrice, e
 	prices := make([]HistoricalPrice, 0)
 	r := newPriceScanner(resp.Body)
 	for r.Scan() {
+		if r.Blank() {
+			continue
+		}
 		prices = append(prices, r.Price())
 	}
 	return prices, r.Err()
@@ -53,6 +56,7 @@ func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]HistoricalPrice, e
 type priceScanner struct {
 	scanner *bufio.Scanner
 	price   HistoricalPrice
+	blank   bool
 	err     error
 }
 
@@ -84,7 +88,14 @@ func (s *priceScanner) Scan() bool {
 	if !s.scanner.Scan() {
 		return false
 	}
-	p, err := s.parsePrice(s.scanner.Text())
+	t := s.scanner.Text()
+	if t == "" {
+		s.blank = true
+		return true
+	}
+	s.blank = false
+
+	p, err := s.parsePrice(t)
 	if err != nil {
 		s.err = err
 		return false
@@ -101,10 +112,14 @@ func (s *priceScanner) Err() error {
 	return s.err
 }
 
+func (s *priceScanner) Blank() bool {
+	return s.blank
+}
+
 func (s *priceScanner) parsePrice(str string) (HistoricalPrice, error) {
 	parts := strings.Split(str, ";")
 	if len(parts) != 7 && len(parts) != 8 {
-		return HistoricalPrice{}, fmt.Errorf("Failed to parse price data")
+		return HistoricalPrice{}, fmt.Errorf("Failed to parse price data: %#v", str)
 	}
 
 	type parseFunc func(parts []string, idx int) (func(p *HistoricalPrice), error)
@@ -187,18 +202,18 @@ func (s *priceScanner) parsePrice(str string) (HistoricalPrice, error) {
 
 func (s *priceScanner) priceTime(parts []string) (time.Time, error) {
 	if len(parts) == 8 {
-		pd, err := time.Parse(monthDayLayout, dropUnknownChars(parts[0]))
+		pd, err := time.Parse(monthDayLayout, parts[0])
 		if err != nil {
 			return time.Time{}, err
 		}
-		ptt, err := time.Parse(timeLayout, dropUnknownChars(parts[1]))
+		ptt, err := time.Parse(timeLayout, parts[1])
 		if err != nil {
 			return time.Time{}, err
 		}
 		return time.Date(time.Now().Year(), pd.Month(), pd.Day(), ptt.Hour(), ptt.Minute(), ptt.Second(), ptt.Nanosecond(), time.UTC), nil
 	}
 
-	pt, err := time.Parse(monthDayYearLayout, dropUnknownChars(parts[0]))
+	pt, err := time.Parse(monthDayYearLayout, parts[0])
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -209,25 +224,45 @@ func splitPriceData(data []byte, atEOF bool) (advance int, token []byte, err err
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
-	if i := bytes.IndexByte(data, '|'); i >= 0 {
-		return i + 1, dropPipeRune(data[0:i]), nil
+	pipe := bytes.IndexByte(data, '|')
+	exclam := bytes.IndexByte(data, '!')
+	if pipe >= 0 || exclam >= 0 {
+		var i int
+		if pipe >= 0 && exclam >= 0 {
+			i = min(pipe, exclam)
+		} else {
+			i = max(pipe, exclam) // split with one which is not -1
+		}
+		return i + 1, dropSeparatorRune(data[0:i]), nil
 	}
 	// If we're at EOF, we have a final, non-terminated line. Return it.
 	if atEOF {
-		return len(data), dropPipeRune(data), nil
+		return len(data), dropSeparatorRune(data), nil
 	}
 	// Request more data.
 	return 0, nil, nil
 }
 
-// dropPipeRune drops a terminal \r from the data.
-func dropPipeRune(data []byte) []byte {
+func dropSeparatorRune(data []byte) []byte {
 	if len(data) > 0 && data[len(data)-1] == '|' {
+		return data[0 : len(data)-1]
+	}
+	if len(data) > 0 && data[len(data)-1] == '!' {
 		return data[0 : len(data)-1]
 	}
 	return data
 }
 
-func dropUnknownChars(s string) string {
-	return strings.ReplaceAll(s, "!", "")
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

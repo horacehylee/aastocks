@@ -29,7 +29,7 @@ import (
 	"github.com/horacehylee/aastocks"
 )
 
-// This example demonstrates getting financial data of quote from AAStocks
+// Example demonstrates getting financial data of quote from AAStocks
 func Example() {
 	logger := log.New(os.Stdout, "", log.Flags())
 
@@ -39,14 +39,14 @@ func Example() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	logger.Printf("Quote: %#v\n", quote)
+	logger.Printf("Quote: %+v\n", quote)
 
 	// Getting dividends of the quote from AAStocks
 	d, err := quote.Dividends()
 	if err != nil {
 		logger.Fatal(err)
 	}
-	logger.Printf("Dividends count: %#v\n", len(d))
+	logger.Printf("Dividends count: %v\n", len(d))
 
 	// Getting historical prices of the quote from AAStocks
 	prices, err := quote.HistoricalPrices(aastocks.Hourly)
@@ -64,9 +64,11 @@ func Example() {
 	for {
 		select {
 		case p := <-priceChan:
-			logger.Printf("Price: %#v\n", p)
+			logger.Printf("Price: %+v\n", p)
 		case err = <-errChan:
 			logger.Printf("Error: %v\n", err)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -74,7 +76,6 @@ func Example() {
 func main() {
     Example()
 }
-
 ```
 
 ## License
