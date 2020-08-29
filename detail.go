@@ -13,11 +13,6 @@ import (
 
 const na = "N/A"
 
-// Refresh quote details
-func (q *Quote) Refresh() error {
-	return q.details()
-}
-
 func (q *Quote) details() error {
 	url := fmt.Sprintf(`http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=%s`, q.Symbol)
 	resp, err := q.client.Get(url)

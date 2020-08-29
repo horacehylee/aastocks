@@ -76,13 +76,6 @@ func TestGetQuote(t *testing.T) {
 				if diff != "" {
 					t.Fatalf(diff)
 				}
-
-				quote.Refresh()
-
-				diff = cmp.Diff(tC.quote, *quote, cmp.AllowUnexported(Quote{}), cmpopts.IgnoreTypes(&http.Client{}))
-				if diff != "" {
-					t.Fatalf(diff)
-				}
 				return nil
 			})
 		})

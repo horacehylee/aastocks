@@ -1,24 +1,4 @@
-# aastocks : AAStocks financial market data extractor
-
-## Overview
-
-[![GoDoc](https://godoc.org/github.com/horacehylee/aastocks?status.svg)](https://godoc.org/github.com/horacehylee/aastocks)
-[![Go Report Card](https://goreportcard.com/badge/github.com/horacehylee/aastocks)](https://goreportcard.com/report/github.com/horacehylee/aastocks)
-[![codecov](https://codecov.io/gh/horacehylee/aastocks/branch/master/graph/badge.svg)](https://codecov.io/gh/horacehylee/aastocks)
-[![Sourcegraph](https://sourcegraph.com/github.com/horacehylee/aastocks/-/badge.svg)](https://sourcegraph.com/github.com/horacehylee/aastocks?badge)
-
-AAStocks financial market data extractor
-
-## Install
-
-```
-go get github.com/horacehylee/aastocks
-```
-
-## Example
-
-```Go
-package main
+package aastocks_test
 
 import (
 	"context"
@@ -70,13 +50,3 @@ func Example() {
 		}
 	}
 }
-
-func main() {
-    Example()
-}
-
-```
-
-## License
-
-MIT.

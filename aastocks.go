@@ -20,13 +20,6 @@ type Quote struct {
 	client *http.Client
 }
 
-func (q *Quote) clone() *Quote {
-	return &Quote{
-		Symbol: q.Symbol,
-		client: q.client,
-	}
-}
-
 // Get quote from AAStocks with symbol
 func Get(symbol string, opts ...Option) (*Quote, error) {
 	q := &Quote{

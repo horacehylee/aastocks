@@ -12,6 +12,13 @@ type PriceResult struct {
 	Time   time.Time
 }
 
+func (q *Quote) clone() *Quote {
+	return &Quote{
+		Symbol: q.Symbol,
+		client: q.client,
+	}
+}
+
 // ServePrices continuously fetching latest price from AAStocks.
 // It will start goroutine to fetch real time prices.
 func (q *Quote) ServePrices(ctx context.Context, delay time.Duration) (<-chan PriceResult, <-chan error) {
