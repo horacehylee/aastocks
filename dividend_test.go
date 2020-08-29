@@ -8,12 +8,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestQuoteDividend(t *testing.T) {
+func TestDividends(t *testing.T) {
 	mock := mockClient()
 	testCases := []struct {
 		symbol    string
 		requests  map[string]http.HandlerFunc
-		dividends []*Dividend
+		dividends []Dividend
 		err       error
 	}{
 		{
@@ -22,7 +22,7 @@ func TestQuoteDividend(t *testing.T) {
 				"GET-http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=00006": serveFile("testdata/detail_quote.html"),
 				"GET-http://www.aastocks.com/en/stocks/analysis/dividend.aspx?symbol=00006":  serveFile("testdata/dividend.html"),
 			},
-			dividends: []*Dividend{
+			dividends: []Dividend{
 				{
 					AnnounceDate: time.Date(2020, time.August, 5, 0, 0, 0, 0, time.UTC),
 					YearEnded:    time.Date(2020, time.December, 1, 0, 0, 0, 0, time.UTC),
@@ -67,7 +67,7 @@ func TestQuoteDividend(t *testing.T) {
 				"GET-http://www.aastocks.com/en/stocks/quote/detail-quote.aspx?symbol=09923": serveFile("testdata/detail_quote_new.html"),
 				"GET-http://www.aastocks.com/en/stocks/analysis/dividend.aspx?symbol=09923":  serveFile("testdata/divdend_empty.html"),
 			},
-			dividends: []*Dividend{},
+			dividends: []Dividend{},
 		},
 	}
 	for _, tC := range testCases {

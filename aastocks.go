@@ -17,8 +17,7 @@ type Quote struct {
 	Eps        float64
 	UpdateTime time.Time
 
-	client    *http.Client
-	dividends []*Dividend
+	client *http.Client
 }
 
 func (q *Quote) clone() *Quote {

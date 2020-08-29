@@ -4,6 +4,7 @@
 
 [![GoDoc](https://godoc.org/github.com/horacehylee/aastocks?status.svg)](https://godoc.org/github.com/horacehylee/aastocks)
 [![Go Report Card](https://goreportcard.com/badge/github.com/horacehylee/aastocks)](https://goreportcard.com/report/github.com/horacehylee/aastocks)
+[![codecov](https://codecov.io/gh/horacehylee/aastocks/branch/master/graph/badge.svg)](https://codecov.io/gh/horacehylee/aastocks)
 
 AAStocks financial market data extractor
 

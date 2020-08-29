@@ -15,7 +15,7 @@ func TestHistoricalPrice(t *testing.T) {
 		symbol       string
 		requests     map[string]http.HandlerFunc
 		frequency    PriceFrequency
-		firstPrice   Price
+		firstPrice   HistoricalPrice
 		pricesLength int
 		err          error
 	}{
@@ -28,7 +28,7 @@ func TestHistoricalPrice(t *testing.T) {
 			},
 			frequency:    Hourly,
 			pricesLength: 370,
-			firstPrice: Price{
+			firstPrice: HistoricalPrice{
 				Time:  time.Date(time.Now().Year(), time.July, 31, 10, 0, 0, 0, time.UTC),
 				Open:  42.75,
 				High:  43.15,
@@ -45,7 +45,7 @@ func TestHistoricalPrice(t *testing.T) {
 			},
 			frequency:    Daily,
 			pricesLength: 1482,
-			firstPrice: Price{
+			firstPrice: HistoricalPrice{
 				Time:  time.Date(2015, time.August, 26, 0, 0, 0, 0, time.UTC),
 				Open:  45.48,
 				High:  48.03,

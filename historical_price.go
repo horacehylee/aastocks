@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// Price for historical price of quote
-type Price struct {
+// HistoricalPrice is the historical price of quote.
+type HistoricalPrice struct {
 	Time  time.Time
 	Open  float64
 	High  float64
@@ -19,7 +19,7 @@ type Price struct {
 	Close float64
 }
 
-// PriceFrequency for historical price
+// PriceFrequency is the frequency of historical data to be provided.
 type PriceFrequency int
 
 const (
@@ -33,8 +33,8 @@ const (
 	Monthly PriceFrequency = 68
 )
 
-// HistoricalPrices of the quote from AAStocks
-func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]Price, error) {
+// HistoricalPrices fetches historical price of the quote from AAStocks.
+func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]HistoricalPrice, error) {
 	url := fmt.Sprintf(`http://chartdata1.internet.aastocks.com/servlet/iDataServlet/getdaily?id=%s.HK&type=24&market=1&level=1&period=%v&encoding=utf8`, q.Symbol, frequency)
 	resp, err := q.client.Get(url)
 	if err != nil {
@@ -42,7 +42,7 @@ func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]Price, error) {
 	}
 	defer resp.Body.Close()
 
-	prices := make([]Price, 0)
+	prices := make([]HistoricalPrice, 0)
 	r := newPriceScanner(resp.Body)
 	for r.Scan() {
 		prices = append(prices, r.Price())
@@ -52,7 +52,7 @@ func (q *Quote) HistoricalPrices(frequency PriceFrequency) ([]Price, error) {
 
 type priceScanner struct {
 	scanner *bufio.Scanner
-	price   Price
+	price   HistoricalPrice
 	err     error
 }
 
@@ -93,7 +93,7 @@ func (s *priceScanner) Scan() bool {
 	return true
 }
 
-func (s *priceScanner) Price() Price {
+func (s *priceScanner) Price() HistoricalPrice {
 	return s.price
 }
 
@@ -101,23 +101,23 @@ func (s *priceScanner) Err() error {
 	return s.err
 }
 
-func (s *priceScanner) parsePrice(str string) (Price, error) {
+func (s *priceScanner) parsePrice(str string) (HistoricalPrice, error) {
 	parts := strings.Split(str, ";")
 	if len(parts) != 7 && len(parts) != 8 {
-		return Price{}, fmt.Errorf("Failed to parse price data")
+		return HistoricalPrice{}, fmt.Errorf("Failed to parse price data")
 	}
 
-	type parseFunc func(parts []string, idx int) (func(p *Price), error)
+	type parseFunc func(parts []string, idx int) (func(p *HistoricalPrice), error)
 	parseFuncs := []struct {
 		name      string
 		parseFunc parseFunc
 	}{
 		{
 			name: "Time",
-			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+			parseFunc: func(parts []string, idx int) (func(p *HistoricalPrice), error) {
 				var err error
 				t, err := s.priceTime(parts)
-				f := func(p *Price) {
+				f := func(p *HistoricalPrice) {
 					p.Time = t
 				}
 				return f, err
@@ -125,10 +125,10 @@ func (s *priceScanner) parsePrice(str string) (Price, error) {
 		},
 		{
 			name: "Open price",
-			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+			parseFunc: func(parts []string, idx int) (func(p *HistoricalPrice), error) {
 				var err error
 				v, err := strconv.ParseFloat(parts[idx], 64)
-				f := func(p *Price) {
+				f := func(p *HistoricalPrice) {
 					p.Open = v
 				}
 				return f, err
@@ -136,10 +136,10 @@ func (s *priceScanner) parsePrice(str string) (Price, error) {
 		},
 		{
 			name: "High price",
-			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+			parseFunc: func(parts []string, idx int) (func(p *HistoricalPrice), error) {
 				var err error
 				v, err := strconv.ParseFloat(parts[idx], 64)
-				f := func(p *Price) {
+				f := func(p *HistoricalPrice) {
 					p.High = v
 				}
 				return f, err
@@ -147,10 +147,10 @@ func (s *priceScanner) parsePrice(str string) (Price, error) {
 		},
 		{
 			name: "Low price",
-			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+			parseFunc: func(parts []string, idx int) (func(p *HistoricalPrice), error) {
 				var err error
 				v, err := strconv.ParseFloat(parts[idx], 64)
-				f := func(p *Price) {
+				f := func(p *HistoricalPrice) {
 					p.Low = v
 				}
 				return f, err
@@ -158,10 +158,10 @@ func (s *priceScanner) parsePrice(str string) (Price, error) {
 		},
 		{
 			name: "Close price",
-			parseFunc: func(parts []string, idx int) (func(p *Price), error) {
+			parseFunc: func(parts []string, idx int) (func(p *HistoricalPrice), error) {
 				var err error
 				v, err := strconv.ParseFloat(parts[idx], 64)
-				f := func(p *Price) {
+				f := func(p *HistoricalPrice) {
 					p.Close = v
 				}
 				return f, err
@@ -174,11 +174,11 @@ func (s *priceScanner) parsePrice(str string) (Price, error) {
 		startIdx = 1
 	}
 
-	p := Price{}
+	p := HistoricalPrice{}
 	for i, f := range parseFuncs {
 		opt, err := f.parseFunc(parts, startIdx+i)
 		if err != nil {
-			return Price{}, fmt.Errorf("%s failed to be parsed: %v", f.name, err)
+			return HistoricalPrice{}, fmt.Errorf("%s failed to be parsed: %v", f.name, err)
 		}
 		opt(&p)
 	}

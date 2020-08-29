@@ -20,11 +20,7 @@ type Dividend struct {
 }
 
 // Dividends of the quote from AAStocks
-func (q *Quote) Dividends() ([]*Dividend, error) {
-	if len(q.dividends) > 0 {
-		return q.dividends, nil
-	}
-
+func (q *Quote) Dividends() ([]Dividend, error) {
 	url := fmt.Sprintf(`http://www.aastocks.com/en/stocks/analysis/dividend.aspx?symbol=%s`, q.Symbol)
 	resp, err := q.client.Get(url)
 	if err != nil {
@@ -36,13 +32,7 @@ func (q *Quote) Dividends() ([]*Dividend, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	d, err := dividends(doc)
-	if err != nil {
-		return nil, err
-	}
-	q.dividends = d
-	return q.dividends, nil
+	return dividends(doc)
 }
 
 type tableMapping struct {
@@ -51,7 +41,7 @@ type tableMapping struct {
 	mapFunc func(*Dividend, *goquery.Selection) error
 }
 
-func dividends(doc *goquery.Document) ([]*Dividend, error) {
+func dividends(doc *goquery.Document) ([]Dividend, error) {
 	tableBody := doc.Find(`.content div:contains("Dividend History")`).Parent().Find("tbody")
 	if tableBody.Length() == 0 {
 		return nil, fmt.Errorf("Table cannot be found")
@@ -68,7 +58,7 @@ func dividends(doc *goquery.Document) ([]*Dividend, error) {
 	}
 	// No dividends
 	if headers.Length() == 1 && strings.TrimSpace(headers.Text()) == "No related information." {
-		return make([]*Dividend, 0), nil
+		return []Dividend{}, nil
 	}
 
 	mappings, err := getTableMappings(headers)
@@ -76,15 +66,15 @@ func dividends(doc *goquery.Document) ([]*Dividend, error) {
 		return nil, err
 	}
 
-	result := make([]*Dividend, 0)
+	result := make([]Dividend, 0)
 	for i := 1; i < rows.Length(); i++ {
 		row := rows.Eq(i).ChildrenFiltered("td")
-		d := &Dividend{}
+		d := Dividend{}
 		for _, mapping := range mappings {
 			s := row.Eq(mapping.index)
-			err := mapping.mapFunc(d, s)
+			err := mapping.mapFunc(&d, s)
 			if err != nil {
-				return nil, fmt.Errorf("Dividend failed to be parsed for %s of %v row: %v", mapping.header, i, err)
+				return nil, fmt.Errorf("Dividend failed to be parsed for %s of row %v: %v", mapping.header, i, err)
 			}
 		}
 		result = append(result, d)
@@ -100,23 +90,19 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		{
 			header: "Announce Date",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
+				var err error
 				date, err := getTime(s, dateLayout)
-				if err != nil {
-					return err
-				}
 				d.AnnounceDate = date
-				return nil
+				return err
 			},
 		},
 		{
 			header: "Year Ended",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
+				var err error
 				date, err := getTime(s, monthLayout)
-				if err != nil {
-					return err
-				}
 				d.YearEnded = date
-				return nil
+				return err
 			},
 		},
 		{
@@ -143,23 +129,19 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 		{
 			header: "Ex-Date",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
+				var err error
 				date, err := getTime(s, dateLayout)
-				if err != nil {
-					return err
-				}
 				d.ExDate = date
-				return nil
+				return err
 			},
 		},
 		{
 			header: "Payable Date",
 			mapFunc: func(d *Dividend, s *goquery.Selection) error {
+				var err error
 				date, err := getTime(s, dateLayout)
-				if err != nil {
-					return err
-				}
 				d.PayableDate = date
-				return nil
+				return err
 			},
 		},
 	}
@@ -175,7 +157,7 @@ func getTableMappings(headers *goquery.Selection) ([]*tableMapping, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("Table header (%s) cannot be found", mapping.header)
+			return nil, fmt.Errorf(`Table header of "%s" cannot be found`, mapping.header)
 		}
 	}
 	return mappings, nil
