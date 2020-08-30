@@ -46,6 +46,7 @@ func (q *Quote) details() error {
 		eps(q, doc),
 		lots(q, doc),
 		updateTime(q, doc),
+		price52W(q, doc),
 	}
 	for _, op := range ops {
 		err = op()
@@ -96,10 +97,7 @@ func price(q *Quote, doc *goquery.Document) func() error {
 func peRatio(q *Quote, doc *goquery.Document) func() error {
 	return func() error {
 		peRatio := strings.TrimSpace(doc.Find("#tbPERatio .float_r.cls").Text())
-		if peRatio == "" {
-			return fmt.Errorf("PE ratio cannot be found")
-		}
-		if peRatio == na {
+		if peRatio == "" || peRatio == na {
 			return nil
 		}
 		s := strings.Split(peRatio, "/")
@@ -118,10 +116,7 @@ func peRatio(q *Quote, doc *goquery.Document) func() error {
 func pbRatio(q *Quote, doc *goquery.Document) func() error {
 	return func() error {
 		pbRatio := strings.TrimSpace(doc.Find("#tbPBRatio .float_r.cls").Text())
-		if pbRatio == "" {
-			return fmt.Errorf("PB ratio cannot be found")
-		}
-		if strings.Contains(pbRatio, na) {
+		if pbRatio == "" || strings.Contains(pbRatio, na) {
 			return nil
 		}
 		s := strings.Split(pbRatio, "/")
@@ -166,10 +161,7 @@ func yield(q *Quote, doc *goquery.Document) func() error {
 func eps(q *Quote, doc *goquery.Document) func() error {
 	return func() error {
 		eps := strings.TrimSpace(doc.Find(`.quote-box div:contains("EPS")`).Parent().Find(".float_r.cls").Text())
-		if eps == "" {
-			return fmt.Errorf("EPS cannot be found")
-		}
-		if eps == na {
+		if eps == "" || eps == na {
 			return nil
 		}
 		e, err := strconv.ParseFloat(strings.TrimSpace(eps), 64)
@@ -217,6 +209,32 @@ func updateTime(q *Quote, doc *goquery.Document) func() error {
 			return fmt.Errorf("Server date failed to be parsed: %v", err)
 		}
 		q.UpdateTime = tt
+		return nil
+	}
+}
+
+func price52W(q *Quote, doc *goquery.Document) func() error {
+	return func() error {
+		s := doc.Find(`tr td:contains("52 Week")`).Last().Parent().Find(".txt_r.cls").First().Text()
+		if s == "" {
+			return fmt.Errorf("52 week price cannot be found")
+		}
+		if s == na {
+			return nil
+		}
+		parts := strings.Split(s, "-")
+
+		p, err := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+		if err != nil {
+			return fmt.Errorf("52 week low price failed to be parsed: %v", err)
+		}
+		q.Price52WLow = p
+
+		p, err = strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		if err != nil {
+			return fmt.Errorf("52 week high price failed to be parsed: %v", err)
+		}
+		q.Price52WHigh = p
 		return nil
 	}
 }

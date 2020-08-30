@@ -7,15 +7,17 @@ import (
 
 // Quote of AAStocks data
 type Quote struct {
-	Symbol     string
-	Name       string
-	Price      float64
-	Yield      float64
-	PeRatio    float64
-	PbRatio    float64
-	Lots       int
-	Eps        float64
-	UpdateTime time.Time
+	Symbol       string
+	Name         string
+	Price        float64
+	Price52WLow  float64
+	Price52WHigh float64
+	Yield        float64
+	PeRatio      float64
+	PbRatio      float64
+	Lots         int
+	Eps          float64
+	UpdateTime   time.Time
 
 	client *http.Client
 }
